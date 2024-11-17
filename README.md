@@ -21,3 +21,9 @@ redis-cli GET event:2
 ```
 
 ![alt text](image.png)
+
+redis 
+![alt text](redis.png)
+
+database 
+![alt text](event.png)
