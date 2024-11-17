@@ -27,50 +27,20 @@ func Worker(workerID int, eventQueue <-chan Event, wg *sync.WaitGroup, redisClie
 		time.Sleep(1 * time.Second) // Simulasi waktu pemrosesan
 
 		// Simpan data peristiwa ke Redis sebagai data sementara
-		err := retryRedisSet(redisClient, event)
+		err := redisClient.Set(context.Background(), fmt.Sprintf("event:%d", event.ID), event.Payload, 0).Err()
 		if err != nil {
-			log.Printf("Gagal menyimpan event %d ke Redis setelah beberapa percobaan: %v\n", event.ID, err)
+			log.Printf("Error menyimpan ke Redis: %v\n", err)
 			continue
 		}
 
 		// Setelah pemrosesan selesai, simpan ke database MySQL
-		err = retryMySQLInsert(db, event)
+		_, err = db.Exec("INSERT INTO events (id, payload) VALUES (?, ?)", event.ID, event.Payload)
 		if err != nil {
-			log.Printf("Gagal menyimpan event %d ke MySQL setelah beberapa percobaan: %v\n", event.ID, err)
+			log.Printf("Error menyimpan ke MySQL: %v\n", err)
 		} else {
 			fmt.Printf("Event ID: %d berhasil disimpan ke MySQL\n", event.ID)
 		}
 	}
-}
-
-// retryRedisSet mencoba menyimpan data ke Redis beberapa kali jika terjadi kegagalan
-func retryRedisSet(redisClient *redis.Client, event Event) error {
-	const maxRetries = 3
-	var err error
-	for i := 0; i < maxRetries; i++ {
-		err = redisClient.Set(context.Background(), fmt.Sprintf("event:%d", event.ID), event.Payload, 0).Err()
-		if err == nil {
-			return nil
-		}
-		log.Printf("Coba %d: Gagal menyimpan ke Redis untuk event %d: %v\n", i+1, event.ID, err)
-		time.Sleep(1 * time.Second) // Tunggu sebentar sebelum mencoba lagi
-	}
-	return err
-}
-
-// retryMySQLInsert mencoba menyimpan data ke MySQL beberapa kali jika terjadi kegagalan
-func retryMySQLInsert(db *sql.DB, event Event) error {
-	const maxRetries = 3
-	var err error
-	for i := 0; i < maxRetries; i++ {
-		_, err = db.Exec("INSERT INTO events (id, payload) VALUES (?, ?)", event.ID, event.Payload)
-		if err == nil {
-			return nil
-		}
-		log.Printf("Coba %d: Gagal menyimpan ke MySQL untuk event %d: %v\n", i+1, event.ID, err)
-		time.Sleep(1 * time.Second) // Tunggu sebentar sebelum mencoba lagi
-	}
-	return err
 }
 
 func main() {

@@ -27,3 +27,22 @@ redis
 
 database 
 ![alt text](event.png)
+
+## Diagram Alur 
+
+                Sumber Pihak Ketiga
+                        |
+                [ Listener/Receiver ]
+                        |
+                -----> Message Queue (Redis)
+                        |
+              +----------+-----------+
+              |          |           |
+          Worker 1   Worker 2   Worker 3
+              |          |           |
+              +----------+-----------+
+                        |
+                   [ Database ]
+# retry
+![alt text](retry.png)
+
